@@ -1,0 +1,13 @@
+{
+    "name": "botnyx/tm-mailer",
+    "autoload": {
+        "psr-4" : {
+            "botnyx\\tmmailer\\" : "src"
+        }
+    },
+    "require": {
+      "php": ">=7.0",
+      "swiftmailer/swiftmailer": "^6.0",
+	  "botnyx/swift-twig": "dev-master",	
+    }
+}
