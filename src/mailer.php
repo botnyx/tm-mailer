@@ -19,8 +19,8 @@ class mailer {
 	
 	
 	function __construct($templatedir,$cachedir=false){
-		$loader = new Twig_Loader_Filesystem($templatedir);
-		$this->twig = new Twig_Environment($loader, array(
+		$loader = new \Twig_Loader_Filesystem($templatedir);
+		$this->twig = new \Twig_Environment($loader, array(
 			'cache' => $cachedir,
 		));
 	}
@@ -40,26 +40,28 @@ class mailer {
 	
 	
 	
-	function zend($data,$emailtemplate='twig-mail.phtml'){
+	function send($data,$emailtemplate='twig-mail.phtml'){
 		
 		// to address check.
-		if (!in_array('email',$data)){
+		if (!array_key_exists('email',$data)){
 			$error = "Missing email in data structure";
-			throw new Exception($error);
+			throw new \Exception($error);
 		}
-		if (!in_array('name',$data)){
-			throw new Exception("Missing name in data structure");
+		if (!array_key_exists('name',$data)){
+			throw new \Exception("Missing name in data structure");
 		}
-		if (!in_array('web_directory',$data)){
+		if (!array_key_exists('web_directory',$data)){
 			$data['web_directory']="";
 		}
-		
+		//error_log('senderEmail');
 		// who sent this email?
 		if($this->senderEmail===false or $this->senderName===false){
-			throw new Exception("error, no sender name/email");
+			throw new \Exception("error, no sender name/email");
 		}
 		
 		$data['recipient'] = ['name' => $data['name'], 'email' => $data['email']];
+		
+		//var_dump($data);
 		
 		// create mailer-templating instance.
 		$swiftMailerTemplateHelper = new \botnyx\SwiftmailerTwigBundle\Mailer\TwigSwiftHelper($this->twig, $data['web_directory']);
@@ -72,10 +74,10 @@ class mailer {
 		$swiftMailerTemplateHelper->populateMessage($message, $emailtemplate, $data);
 	
 		// Send the message
-		$result = $mailer->send($message, $failures);
+		$result = $this->mailer->send($message, $failures);
 		if(!$result){
 		  $error = 'Mail Error : '.json_encode($failures);
-		  throw new Exception($error);
+		  throw new \Exception($error);
 		}
 		
 		
