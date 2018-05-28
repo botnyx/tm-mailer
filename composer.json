@@ -8,6 +8,6 @@
     "require": {
       "php": ">=7.0",
       "swiftmailer/swiftmailer": "^6.0",
-	  "botnyx/swift-twig": "dev-master",	
+	  "botnyx/swift-twig": "dev-master"	
     }
 }
