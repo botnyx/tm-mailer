@@ -41,14 +41,17 @@ class mailer {
 	
 	
 	function send($data,$emailtemplate='twig-mail.phtml'){
-		
+		//error_log("send( ".json_encode($data).",$emailtemplate)");
 		// to address check.
 		if (!array_key_exists('email',$data)){
 			$error = "Missing email in data structure";
+			error_log($error);
 			throw new \Exception($error);
 		}
 		if (!array_key_exists('name',$data)){
-			throw new \Exception("Missing name in data structure");
+			$error = "Missing name in data structure";
+			error_log($error);
+			throw new \Exception($error);
 		}
 		if (!array_key_exists('web_directory',$data)){
 			$data['web_directory']="";
@@ -56,12 +59,12 @@ class mailer {
 		//error_log('senderEmail');
 		// who sent this email?
 		if($this->senderEmail===false or $this->senderName===false){
+			error_log("error, no sender name/email");
 			throw new \Exception("error, no sender name/email");
 		}
 		
 		$data['recipient'] = ['name' => $data['name'], 'email' => $data['email']];
 		
-		//var_dump($data);
 		
 		// create mailer-templating instance.
 		$swiftMailerTemplateHelper = new \botnyx\SwiftmailerTwigBundle\Mailer\TwigSwiftHelper($this->twig, $data['web_directory']);
@@ -75,11 +78,17 @@ class mailer {
 	
 		// Send the message
 		$result = $this->mailer->send($message, $failures);
+		
+		
 		if(!$result){
-		  $error = 'Mail Error : '.json_encode($failures);
-		  throw new \Exception($error);
+		  	$error = json_encode($failures);
+			error_log($error);
+			throw new \Exception($error);
+		}else{
+			error_log("Mail sent! (".$data['email'].")");
 		}
 		
+		return true;
 		
 	}
 }
