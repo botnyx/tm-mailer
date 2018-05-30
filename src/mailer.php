@@ -6,6 +6,10 @@ class mailer {
 	
 	var $senderEmail=false;
 	var $senderName=false;
+	
+	var $echodebug = false;
+	var $arraydebug = true;
+	
 	/*
 		$x = new \botnyx\tmmailer\mailer();
 		$x->setFrom($senderEmail,$senderName);
@@ -18,11 +22,20 @@ class mailer {
 	*/
 	
 	
-	function __construct($templatedir,$cachedir=false){
+	function __construct($templatedir,$cachedir=false,$dkim=false){
 		$loader = new \Twig_Loader_Filesystem($templatedir);
 		$this->twig = new \Twig_Environment($loader, array(
 			'cache' => $cachedir,
 		));
+		$this->dkim = $dkim;
+		if($dkim){
+			// DKIM 用の Signer を作成する
+			$privateKey = file_get_contents('./default.private');
+			$domainName = 'example.com';
+			$selector = 'default';
+			$this->signer = new \Swift_Signers_DKIMSigner($privateKey, $domainName, $selector);
+		}
+		
 	}
 	
 	public function setFrom($senderEmail,$senderName){
@@ -35,8 +48,44 @@ class mailer {
 		$transport = (new \Swift_SmtpTransport($server, $port))->setUsername($username)->setPassword($password);
 		// Create the Mailer using your created Transport
 		$this->mailer = new \Swift_Mailer($transport);
+		if($this->echodebug) {
+			$logger = new \Swift_Plugins_Loggers_EchoLogger();
+			$this->mailer->registerPlugin(new \Swift_Plugins_LoggerPlugin($logger));
+		}
+		
+		if($this->arraydebug) {
+			// To use the ArrayLogger
+			$this->arraylogger = new \Swift_Plugins_Loggers_ArrayLogger();
+			$this->mailer->registerPlugin(new \Swift_Plugins_LoggerPlugin($this->arraylogger));
+		}
 	}
 	
+	
+	public function dkim(){
+		$transport = Swift_SmtpTransport::newInstance('localhost', 25);
+		$mailer = Swift_Mailer::newInstance($transport);
+		
+		
+		// DKIM 用の Signer を作成する
+		$privateKey = file_get_contents('./default.private');
+		$domainName = 'example.com';
+		$selector = 'default';
+		$this->signer = new \Swift_Signers_DKIMSigner($privateKey, $domainName, $selector);
+		
+		// 署名用の Message インスタンスを作成
+		$message = \Swift_SignedMessage::newInstance();
+		// DKIM Signer をアタッチ
+		
+		$message->attachSigner($this->signer);
+		
+		$message
+			->setFrom(['suzuki@example.com'])
+			->setTo(['YOUR_GMAIL_ADDRESS'])
+			->setSubject('テストメール')
+			->setBody('テストメール本文')
+			;
+		$result = $mailer->send($message);
+	}
 	
 	
 	
@@ -69,16 +118,32 @@ class mailer {
 		// create mailer-templating instance.
 		$swiftMailerTemplateHelper = new \botnyx\SwiftmailerTwigBundle\Mailer\TwigSwiftHelper($this->twig, $data['web_directory']);
 
-
-		// create the message.
-		$message = $this->mailer->createMessage()->setFrom([$this->senderEmail => $this->senderName])->setTo([$data['email']]);
-	
+		
+		if($this->dkim){
+			// 署名用の Message インスタンスを作成
+			$message = \Swift_SignedMessage::newInstance();
+			// DKIM Signer をアタッチ
+			$message->attachSigner($this->signer);
+		}else{
+			// create the message.
+			$message = $this->mailer->createMessage();
+		}
+		
+		$message->setFrom([$this->senderEmail => $this->senderName])->setTo([$data['email']]);
+		$message->setPriority(\Swift_Mime_SimpleMessage::PRIORITY_HIGH);
+		
+		
+		
 		// populate the mail.
 		$swiftMailerTemplateHelper->populateMessage($message, $emailtemplate, $data);
 	
 		// Send the message
 		$result = $this->mailer->send($message, $failures);
 		
+		
+		if($this->arraydebug) {
+			$logarray = $this->arraylogger->dump();
+		}
 		
 		if(!$result){
 		  	$error = json_encode($failures);
@@ -87,8 +152,7 @@ class mailer {
 		}else{
 			error_log("Mail sent! (".$data['email'].")");
 		}
-		
-		return true;
+		return $logarray;
 		
 	}
 }
