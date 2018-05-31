@@ -66,23 +66,20 @@ class mailer {
 		$mailer = Swift_Mailer::newInstance($transport);
 		
 		
-		// DKIM 用の Signer を作成する
+		// DKIM mail Signer 
 		$privateKey = file_get_contents('./default.private');
 		$domainName = 'example.com';
 		$selector = 'default';
 		$this->signer = new \Swift_Signers_DKIMSigner($privateKey, $domainName, $selector);
 		
-		// 署名用の Message インスタンスを作成
 		$message = \Swift_SignedMessage::newInstance();
-		// DKIM Signer をアタッチ
-		
 		$message->attachSigner($this->signer);
 		
 		$message
 			->setFrom(['suzuki@example.com'])
 			->setTo(['YOUR_GMAIL_ADDRESS'])
-			->setSubject('テストメール')
-			->setBody('テストメール本文')
+			->setSubject('abc')
+			->setBody('abc')
 			;
 		$result = $mailer->send($message);
 	}
@@ -120,9 +117,7 @@ class mailer {
 
 		
 		if($this->dkim){
-			// 署名用の Message インスタンスを作成
 			$message = \Swift_SignedMessage::newInstance();
-			// DKIM Signer をアタッチ
 			$message->attachSigner($this->signer);
 		}else{
 			// create the message.
